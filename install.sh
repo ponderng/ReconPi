@@ -394,6 +394,15 @@ additionalTools() {
 	echo -e "[$GREEN+$RESET] Installing Altdns.."
 	pip install py-altdns
 	echo -e "[$GREEN+$RESET] Done."
+
+	echo -e "[$GREEN+$RESET] Installing Nscope.."
+	if [ -e "$HOME"/tools/nscope]; then
+		echo -e "[$GREEN+$RESET] Already installed."
+	else
+		wget https://raw.githubusercontent.com/ponderng/nscope/master/nscope -O "$HOME"/tools/nscope
+		chmod +x "$HOME"/tools/nscope
+		echo -e "[$GREEN+$RESET] Done."
+	fi
 }
 
 : 'Dashboard setup'

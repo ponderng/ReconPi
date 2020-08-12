@@ -10,6 +10,7 @@ YELLOW="\033[1;33m"
 GREEN="\033[0;32m"
 RESET="\033[0m"
 domain="$1"
+SCOPE="$2"
 RESULTDIR="$HOME/assets/$domain"
 WORDLIST="$RESULTDIR/wordlists"
 SCREENSHOTS="$RESULTDIR/screenshots"
@@ -22,6 +23,10 @@ ARCHIVE="$RESULTDIR/archive"
 VERSION="2.1"
 NUCLEISCAN="$RESULTDIR/nucleiscan"
 
+function pause(){
+ read -s -n 1 -p "Press any key to continue . . ."
+ echo ""
+}
 
 : 'Display the logo'
 displayLogo() {
@@ -36,13 +41,13 @@ __________                          __________.__
 			v$VERSION - $YELLOW@x1m_martijn$RESET" 
 		}
 
-	: 'Display help text when no arguments are given'
-	checkArguments() {
-		if [[ -z $domain ]]; then
-			echo -e "[$GREEN+$RESET] Usage: recon <domain.tld>"
-			exit 1
-		fi
-	}
+: 'Display help text when no arguments are given'
+checkArguments() {
+	if [[ -z $domain ]]; then
+		echo -e "[$GREEN+$RESET] Usage: recon <domain.tld> [scope file]"
+		exit 1
+	fi
+}
 
 checkDirectories() {
 	if [ ! -d "$RESULTDIR" ]; then
@@ -114,6 +119,13 @@ gatherSubdomains() {
 
 	echo -e "[$GREEN+$RESET] Combining and sorting results.."
 	cat "$SUBS"/*.txt | sort -u >"$SUBS"/subdomains
+
+	# Check subdomains against scope file if given
+	if [ ! -z $scope ]; then
+		echo -e "[$GREEN+$RESET] Checking scope.."
+		"$HOME"/tools/nscope -t "$SUBS"/subdomains -s "$SCOPE" -o "$SUBS"/subdomains
+	fi
+
 	echo -e "[$GREEN+$RESET] Resolving subdomains.."
 	#cat "$SUBS"/subdomains | shuffledns -silent -d "$domain" -r "$IPS"/resolvers.txt -o "$SUBS"/all_subdomains.txt
 	# rm "$SUBS"/subdomains
@@ -222,6 +234,7 @@ fetchEndpoints() {
 	done
 	echo -e "[$GREEN+$RESET] fetchEndpoints finished"
 }
+
 : 'Gather information with meg'
 startMeg() {
 	startFunction "meg"
@@ -306,11 +319,11 @@ getCNAME
 gatherIPs
 gatherScreenshots
 startMeg
-#fetchArchive
-#fetchEndpoints
-runNuclei
+fetchArchive
+fetchEndpoints
+#runNuclei
 portScan
 #makePage
-notifySlack
+#notifySlack
 
 # Uncomment the functions 
