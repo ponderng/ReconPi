@@ -6,12 +6,15 @@
 '
 
 : 'Set the main variables'
+TODATE=$(date +"%Y-%m-%d")
+FOLDERNAME=recon-$TODATE
+SECONDS=0
 YELLOW="\033[1;33m"
 GREEN="\033[0;32m"
 RESET="\033[0m"
-domain="$1"
+DOMAIN="$1"
 SCOPE="$2"
-RESULTDIR="$HOME/assets/$domain"
+RESULTDIR="$HOME/assets/$DOMAIN/$FOLDERNAME"
 WORDLIST="$RESULTDIR/wordlists"
 SCREENSHOTS="$RESULTDIR/screenshots"
 SUBS="$RESULTDIR/subdomains"
@@ -206,7 +209,7 @@ portScan() {
 : 'Use aquatone+chromium-browser to gather screenshots'
 gatherScreenshots() {
 	startFunction "aquatone"
-	"$HOME"/go/bin/aquatone -http-timeout 10000 -out "$SCREENSHOTS" <"$SUBS"/hosts
+	"$HOME"/go/bin/aquatone -save-body false -http-timeout 10000 -out "$SCREENSHOTS" <"$SUBS"/hosts
 	echo -e "[$GREEN+$RESET] Aquatone finished"
 }
 
@@ -309,6 +312,7 @@ notifySlack() {
 
 source "$HOME"/ReconPi/configs/tokens.txt || return
 
+# Uncomment the functions 
 displayLogo
 checkArguments
 checkDirectories
@@ -323,7 +327,10 @@ fetchArchive
 fetchEndpoints
 #runNuclei
 portScan
-#makePage
+makePage
 #notifySlack
 
-# Uncomment the functions 
+: 'Finish up'
+echo "${green}Scan for $domain finished successfully${reset}"
+duration=$SECONDS
+echo "Scan completed in : $(($duration / 60)) minutes and $(($duration % 60)) seconds."
