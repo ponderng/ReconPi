@@ -46,7 +46,7 @@ __________                          __________.__
 
 : 'Display help text when no arguments are given'
 checkArguments() {
-	if [[ -z $domain ]]; then
+	if [[ -z $DOMAIN ]]; then
 		echo -e "[$GREEN+$RESET] Usage: recon <domain.tld> [scope file]"
 		exit 1
 	fi
@@ -54,10 +54,10 @@ checkArguments() {
 
 checkDirectories() {
 	if [ ! -d "$RESULTDIR" ]; then
-		echo -e "[$GREEN+$RESET] Creating directories and grabbing wordlists for $GREEN$domain$RESET.."
+		echo -e "[$GREEN+$RESET] Creating directories and grabbing wordlists for $GREEN$DOMAIN$RESET.."
 		mkdir -p "$RESULTDIR"
 		mkdir -p "$SUBS" "$SCREENSHOTS" "$DIRSCAN" "$HTML" "$WORDLIST" "$IPS" "$PORTSCAN" "$ARCHIVE" "$NUCLEISCAN"
-		#sudo mkdir -p /var/www/html/"$domain"
+		#sudo mkdir -p /var/www/html/"$DOMAIN"
 	fi
 }
 
@@ -70,7 +70,7 @@ startFunction() {
 gatherResolvers() {
 	startFunction "bass (resolvers)"
 	cd "$HOME"/tools/bass || return
-	python3 bass.py -d "$domain" -o "$IPS"/resolvers.txt
+	python3 bass.py -d "$DOMAIN" -o "$IPS"/resolvers.txt
 }
 
 : 'subdomain gathering'
@@ -79,45 +79,45 @@ gatherSubdomains() {
 	echo -e "[$GREEN+$RESET] Checking for existing sublert output, otherwise add it."
 	if [ ! -e "$SUBS"/sublert.txt ]; then
 		cd "$HOME"/tools/sublert || return
-		yes | python3 sublert.py -u "$domain"
-		cp "$HOME"/tools/sublert/output/"$domain".txt "$SUBS"/sublert.txt
+		yes | python3 sublert.py -u "$DOMAIN"
+		cp "$HOME"/tools/sublert/output/"$DOMAIN".txt "$SUBS"/sublert.txt
 		cd "$HOME" || return
 	else
-		cp "$HOME"/tools/sublert/output/"$domain".txt "$SUBS"/sublert.txt
+		cp "$HOME"/tools/sublert/output/"$DOMAIN".txt "$SUBS"/sublert.txt
 	fi
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "subfinder"
-	"$HOME"/go/bin/subfinder -d "$domain" -config "$HOME"/ReconPi/configs/config.yaml -o "$SUBS"/subfinder.txt
+	"$HOME"/go/bin/subfinder -d "$DOMAIN" -config "$HOME"/ReconPi/configs/config.yaml -o "$SUBS"/subfinder.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "assetfinder"
-	"$HOME"/go/bin/assetfinder --subs-only "$domain" >"$SUBS"/assetfinder.txt
+	"$HOME"/go/bin/assetfinder --subs-only "$DOMAIN" >"$SUBS"/assetfinder.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "amass"
-	"$HOME"/go/bin/amass enum -passive -d "$domain" -config "$HOME"/ReconPi/configs/config.ini -o "$SUBS"/amassp.txt
+	"$HOME"/go/bin/amass enum -passive -d "$DOMAIN" -config "$HOME"/ReconPi/configs/config.ini -o "$SUBS"/amassp.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "findomain"
-	findomain -t "$domain" -u "$SUBS"/findomain_subdomains.txt
+	findomain -t "$DOMAIN" -u "$SUBS"/findomain_subdomains.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "chaos"
-	chaos -d "$domain" -key $CHAOS_KEY -o "$SUBS"/chaos_data.txt
+	chaos -d "$DOMAIN" -key $CHAOS_KEY -o "$SUBS"/chaos_data.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	# Github gives different result sometimes, so running multiple instances so that we don't miss any subdomain
 	startFunction "github-subdomains"
-	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$domain" | sort -u >> "$SUBS"/github_subdomains.txt
+	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$DOMAIN" | sort -u >> "$SUBS"/github_subdomains.txt
 	sleep 5
-	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$domain" | sort -u >> "$SUBS"/github_subdomains.txt
+	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$DOMAIN" | sort -u >> "$SUBS"/github_subdomains.txt
 	sleep 5
-	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$domain" | sort -u >> "$SUBS"/github_subdomains.txt
+	python3 "$HOME"/tools/github-subdomains.py -t $github_subdomains_token -d "$DOMAIN" | sort -u >> "$SUBS"/github_subdomains.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	startFunction "Starting rapiddns"
-	curl -s "https://rapiddns.io/subdomain/$domain?full=1" | grep -oP '_blank">\K[^<]*' | grep -v http | sort -u | tee "$SUBS"/rapiddns_subdomains.txt
+	curl -s "https://rapiddns.io/subdomain/$DOMAIN?full=1" | grep -oP '_blank">\K[^<]*' | grep -v http | sort -u | tee "$SUBS"/rapiddns_subdomains.txt
 	echo -e "[$GREEN+$RESET] Done, next."
 
 	echo -e "[$GREEN+$RESET] Combining and sorting results.."
@@ -130,7 +130,7 @@ gatherSubdomains() {
 	fi
 
 	echo -e "[$GREEN+$RESET] Resolving subdomains.."
-	#cat "$SUBS"/subdomains | shuffledns -silent -d "$domain" -r "$IPS"/resolvers.txt -o "$SUBS"/all_subdomains.txt
+	#cat "$SUBS"/subdomains | shuffledns -silent -d "$DOMAIN" -r "$IPS"/resolvers.txt -o "$SUBS"/all_subdomains.txt
 	# rm "$SUBS"/subdomains
 
 	#all_subdomains="$(wc -l<"$SUBS"/all_subdomains.txt)"
@@ -138,16 +138,16 @@ gatherSubdomains() {
 	#If total alive subdomains are less than 500, run dnsgen otherwise altdns, this is done to keep script efficient.
 	# if [ "$all_subdomains" -lt 500 ]; then
 	# echo -e "[$GREEN+$RESET] Running dnsgen to mutate subdomains and resolving them.."
-	# # cat "$SUBS"/all_subdomains.txt | dnsgen - | sort -u | shuffledns -silent -d "$domain" -r "$IPS"/resolvers.txt -o "$SUBS"/dnsgen.txt
+	# # cat "$SUBS"/all_subdomains.txt | dnsgen - | sort -u | shuffledns -silent -d "$DOMAIN" -r "$IPS"/resolvers.txt -o "$SUBS"/dnsgen.txt
 	# # cat "$SUBS"/dnsgen.txt | sort -u >> "$SUBS"/all_subdomains.txt
 	# else
 	# echo -e "[$GREEN+$RESET] Running altdns to mutate subdomains and resolving them.."
 	# altdns -i "$SUBS"/all_subdomains.txt -w "$HOME"/ReconPi/wordlists/words_permutation.txt -o "$SUBS"/altdns.txt
-	# cat "$SUBS"/altdns.txt | shuffledns -silent -d "$domain" -r "$IPS"/resolvers.txt >> "$SUBS"/all_subdomains.txt
+	# cat "$SUBS"/altdns.txt | shuffledns -silent -d "$DOMAIN" -r "$IPS"/resolvers.txt >> "$SUBS"/all_subdomains.txt
 	# fi
 
 	#echo -e "[$GREEN+$RESET] Resolving All Subdomains.."
-	#cat "$SUBS"/subdomains.txt | sort -u | shuffledns -silent -d "$domain" -r "$IPS"/resolvers.txt > "$SUBS"/alive_subdomains
+	#cat "$SUBS"/subdomains.txt | sort -u | shuffledns -silent -d "$DOMAIN" -r "$IPS"/resolvers.txt > "$SUBS"/alive_subdomains
 	#rm "$SUBS"/subdomains.txt
 	# Get http and https hosts
 	echo -e "[$GREEN+$RESET] Getting alive hosts.."
@@ -194,15 +194,15 @@ getCNAME() {
 : 'Gather IPs with dnsprobe'
 gatherIPs() {
 	startFunction "dnsprobe"
-	cat "$SUBS"/subdomains | dnsprobe -silent -f ip | tee "$IPS"/"$domain"-ips.txt
-	cat "$IPS"/"$domain"-ips.txt | cf-check -c 5 | sort -u > "$IPS"/"$domain"-origin-ips.txt
+	cat "$SUBS"/subdomains | dnsprobe -silent -f ip | tee "$IPS"/"$DOMAIN"-ips.txt
+	cat "$IPS"/"$DOMAIN"-ips.txt | cf-check -c 5 | sort -u > "$IPS"/"$DOMAIN"-origin-ips.txt
 	echo -e "[$GREEN+$RESET] Done."
 }
 
 : 'Portscan on found IP addresses'
 portScan() {
 	startFunction "Starting Port Scan"
-	cat "$IPS"/"$domain"-origin-ips.txt | naabu -silent | bash "$HOME"/tools/naabu2nmap.sh | tee "$PORTSCAN"/"$domain".nmap
+	cat "$IPS"/"$DOMAIN"-origin-ips.txt | naabu -silent | bash "$HOME"/tools/naabu2nmap.sh | tee "$PORTSCAN"/"$DOMAIN".nmap
 	echo -e "[$GREEN+$RESET] Port Scan finished"
 }
 
@@ -284,12 +284,12 @@ makePage() {
 	startFunction "HTML webpage"
 	cd /var/www/html/ || return
 	sudo chmod -R 755 .
-	sudo cp -r "$SCREENSHOTS" /var/www/html/$domain
-	sudo chmod a+r -R /var/www/html/$domain/*
+	sudo cp -r "$SCREENSHOTS" /var/www/html/$DOMAIN
+	sudo chmod a+r -R /var/www/html/$DOMAIN/*
 	cd "$HOME" || return
 	echo -e "[$GREEN+$RESET] Scan finished, start doing some manual work ;)"
 	echo -e "[$GREEN+$RESET] The aquatone results page, nuclei results directory and the meg results directory are great starting points!"
-	echo -e "[$GREEN+$RESET] Aquatone results page: http://$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1)/$domain/screenshots/aquatone_report.html"
+	echo -e "[$GREEN+$RESET] Aquatone results page: http://$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1)/$DOMAIN/screenshots/aquatone_report.html"
 }
 
 notifySlack() {
@@ -300,11 +300,11 @@ notifySlack() {
 	nucleiCveScan="$(cat $NUCLEISCAN/cve.txt)"
 	nucleiFileScan="$(cat $NUCLEISCAN/files.txt)"
 
-	curl -s -X POST -H 'Content-type: application/json' --data '{"text":"Found '$totalsum' live hosts for '$domain'"}' $slack_url 2 > /dev/null
+	curl -s -X POST -H 'Content-type: application/json' --data '{"text":"Found '$totalsum' live hosts for '$DOMAIN'"}' $slack_url 2 > /dev/null
 	curl -s -X POST -H 'Content-type: application/json' --data '{"text":"Found '$intfiles' interesting files using nuclei"}' $slack_url 2 > /dev/null
-	curl -s -X POST -H 'Content-type: application/json' --data '{"text":"Found '$takeover' subdomain takeovers on '$domain'"}' $slack_url 2 > /dev/null
-	curl -s -X POST -H 'Content-type: application/json' --data "{'text':'CVEs found for $domain: \n $nucleiCveScan'}" $slack_url 2>/dev/null
-	curl -s -X POST -H 'Content-type: application/json' --data "{'text':'Files for $domain: \n $nucleiFileScan'}" $slack_url 2>/dev/null
+	curl -s -X POST -H 'Content-type: application/json' --data '{"text":"Found '$takeover' subdomain takeovers on '$DOMAIN'"}' $slack_url 2 > /dev/null
+	curl -s -X POST -H 'Content-type: application/json' --data "{'text':'CVEs found for $DOMAIN: \n $nucleiCveScan'}" $slack_url 2>/dev/null
+	curl -s -X POST -H 'Content-type: application/json' --data "{'text':'Files for $DOMAIN: \n $nucleiFileScan'}" $slack_url 2>/dev/null
 	echo -e "[$GREEN+$RESET] Done."
 }
 
@@ -331,6 +331,6 @@ makePage
 #notifySlack
 
 : 'Finish up'
-echo "${green}Scan for $domain finished successfully${reset}"
-duration=$SECONDS
-echo "Scan completed in : $(($duration / 60)) minutes and $(($duration % 60)) seconds."
+echo "${GREEN}Scan for $DOMAIN finished successfully${RESET}"
+DURATION=$SECONDS
+echo "Scan completed in : $(($DURATION / 60)) minutes and $(($DURATION % 60)) seconds."
