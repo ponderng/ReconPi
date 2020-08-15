@@ -331,6 +331,6 @@ makePage
 #notifySlack
 
 : 'Finish up'
-echo "${GREEN}Scan for $DOMAIN finished successfully${RESET}"
+echo "[$GREEN+$RESET] Scan for $DOMAIN finished successfully"
 DURATION=$SECONDS
 echo "Scan completed in : $(($DURATION / 60)) minutes and $(($DURATION % 60)) seconds."
